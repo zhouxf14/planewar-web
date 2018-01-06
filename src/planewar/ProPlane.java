@@ -14,7 +14,6 @@ public class ProPlane extends GameObject implements Enemy {
 		this.x = random;
 		this.y = -PlaneWar.proplane.getHeight();
 		this.life = 2;
-		
 		this.image = PlaneWar.proplane;
 	}
 

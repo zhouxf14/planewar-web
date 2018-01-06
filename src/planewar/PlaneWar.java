@@ -33,6 +33,7 @@ public class PlaneWar extends JPanel {
 
 	public static JFrame frame = new JFrame();
 	static PaintThread pt;
+	public static int lastBullet = 0;
 
 	// the images in the plane war
 	public static BufferedImage suicidalplane;
@@ -153,16 +154,21 @@ public class PlaneWar extends JPanel {
 
 	int bulletIndex = 0;			
 	public void shootAction() {
+		bulletIndex ++;
 		KeyAdapter keyBullet = new KeyAdapter() {
 			public void keyPressed(KeyEvent e) {
 				if (state == RUNNING) {
-					if (e.getKeyCode() == e.VK_SPACE) {
-						bulletIndex ++;
-						if (bulletIndex % 20 == 0) {
+					if (e.getKeyCode() == e.VK_SPACE) {	
+						int temp = bulletIndex;
+						int interval = temp - lastBullet;
+						if (interval > 20) {
 							//The minimal shoot interval is 20 * 50ms = 1s
-							Bullet[] bulletsTem = myPlane.shoot();
-							bullets = Arrays.copyOf(bullets, bullets.length + bulletsTem.length);
-							System.arraycopy(bulletsTem, 0, bullets, bullets.length - bulletsTem.length, bulletsTem.length);
+							Bullet bulletNew = myPlane.shoot();
+							int l = bullets.length;
+							bullets = Arrays.copyOf(bullets, l + 1);
+							bullets[l] = bulletNew;
+							lastBullet = temp;
+//							System.arraycopy(bulletsTem, 0, bullets, bullets.length - bulletsTem.length, bulletsTem.length);
 						}
 					}
 				}
@@ -248,7 +254,7 @@ public class PlaneWar extends JPanel {
 		int index = -1;				// the index of the enemy plane
 		for (int i = 0; i < flyings.length; i++) {
 			GameObject f = flyings[i];
-			if (f.getShot(bu) && bullets[indexBu].notUsed) {
+			if (f.getShot(bu)) {
 				deleteBullet(bullets[indexBu]);
 				index = i;
 				break;
@@ -276,7 +282,9 @@ public class PlaneWar extends JPanel {
 		for (int i = 0; i < bullets.length; i++) {
 			Bullet b = bullets[i];
 			// whether the bullet has shot an enemy plane
-			boundBullet(b, i);
+			if (b.notUsed) {
+				boundBullet(b, i);
+			}
 		}
 	}
 	
@@ -304,7 +312,7 @@ public class PlaneWar extends JPanel {
 	}
 	
 	public boolean isWin() {
-		if (enemyLife > 20) {
+		if (enemyLife >= 20) {
 			return true;
 		} else {
 			return false;

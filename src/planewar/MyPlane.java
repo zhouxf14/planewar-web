@@ -15,13 +15,11 @@ public class MyPlane extends GameObject {
 	}
 	
 	// ??? my plane shoot
-	public Bullet[] shoot() {
+	public Bullet shoot() {
 		int xPoint = PlaneWar.myplane0.getWidth()/4;
 		int yPoint = 10;
-		Bullet[] bullets = {};
-		bullets = new Bullet[1];
-		bullets[0] = new Bullet(xPoint * 2 + this.getX(), this.getY() - yPoint);
-		return bullets;
+		Bullet bullet = new Bullet(xPoint * 2 + this.getX(), this.getY() - yPoint);
+		return bullet;
 	}
 	
 	// move my plane

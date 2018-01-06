@@ -179,7 +179,7 @@ public class PlaneWar extends JPanel {
 
 	public GameObject nextGameObject() {
 		int x = new Random().nextInt(10);
-		if (x <= 1) {
+		if (x <= 2) {
 			return new ProPlane();
 		}else if (x <= 5){
 			return new SuicidalPlane(myPlane.getX());

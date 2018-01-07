@@ -9,7 +9,7 @@ public class ProPlane extends GameObject implements Enemy {
 	int xAbsoluteSpeed = 1;
 	int ySpeed = 1;
 	
-	ProPlane(){
+	public ProPlane(){
 		int random = new Random().nextInt(PlaneWar.WIDTH - 2 * PlaneWar.proplane.getWidth()) + PlaneWar.proplane.getWidth();
 		this.x = random;
 		this.y = -PlaneWar.proplane.getHeight();

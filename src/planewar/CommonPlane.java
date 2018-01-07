@@ -9,7 +9,7 @@ public class CommonPlane extends GameObject implements Enemy {
 	int xAbsoluteSpeed = 1;
 	int ySpeed = 1;
 	
-	CommonPlane(){
+	public CommonPlane(){
 		int random = new Random().nextInt(PlaneWar.WIDTH - 2 * PlaneWar.commonplane.getWidth()) + PlaneWar.commonplane.getWidth();
 		this.x = random;
 		this.y = -PlaneWar.commonplane.getHeight();

@@ -7,7 +7,7 @@ public class SuicidalPlane extends GameObject implements Enemy {
 	// the moving speed of the suicidal plane
 	int speed = 1;
 	
-	SuicidalPlane(int x){
+	public SuicidalPlane(int x){
 //		int random = new Random().nextInt(PlaneWar.WIDTH - 2 * PlaneWar.suicidalplane.getWidth()) + PlaneWar.suicidalplane.getWidth();
 		this.x = x;
 		this.y = -this.height;

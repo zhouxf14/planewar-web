@@ -1,39 +1,65 @@
-package planewar;
+package server;
 
 import java.awt.Color;
-import java.awt.Desktop.Action;
 import java.awt.Font;
-import java.awt.Frame;
 import java.awt.Graphics;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
+import java.io.PrintWriter;
+import java.net.ServerSocket;
+import java.net.Socket;
 import java.util.Arrays;
 import java.util.Random;
-import java.util.Timer;
-import java.util.TimerTask;
+
 import javax.imageio.ImageIO;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
+
+import planewar.Bullet;
+import planewar.CommonPlane;
+import planewar.Enemy;
+import planewar.GameObject;
+import planewar.MyPlane;
+import planewar.ProPlane;
+import planewar.SuicidalPlane;
 
 /**
  * @author b_anhr
  *
  */
-public class PlaneWar extends JPanel {
+public class PlaneWar extends JPanel implements Runnable{
 
 	// Common Class
 	public MyPlane myPlane = new MyPlane();
+	public MyPlane plane2 = new MyPlane();
 	private GameObject[] flyings = {};
 	// bullets of my plane
 	private Bullet[] bullets = {};
 
-	public static JFrame frame = new JFrame();
-	static PaintThread pt;
+//	public static JFrame frame = new JFrame();
 	public static int lastBullet = 0;
+	
+    // Thread
+    private Thread thread = null;
+//    private SetupConnection setupConnection = null;
+
+    // sever and socket
+    private Socket socket;
+    private BufferedReader is;
+    private PrintWriter os;
+    private ServerSocket server;
+//  private ServerSocket quit;
+    private ConnectThread connectThread;
+
+    // message
+    private String message = "";
 
 	// the images in the plane war
 	public static BufferedImage suicidalplane;
@@ -65,18 +91,18 @@ public class PlaneWar extends JPanel {
 	static{
 		// initialize the images in the plane game
 		try {
-			suicidalplane = ImageIO.read(PlaneWar.class.getResource("suicidalplane.png"));
-			background = ImageIO.read(PlaneWar.class.getResource("background.png"));
-			proplane = ImageIO.read(PlaneWar.class.getResource("proplane.png"));
-			commonplane = ImageIO.read(PlaneWar.class.getResource("commonplane.png"));
-			bullet = ImageIO.read(PlaneWar.class.getResource("bullet.png"));
-			gameover = ImageIO.read(PlaneWar.class.getResource("gameover.png"));
-			myplane0 = ImageIO.read(PlaneWar.class.getResource("myplane0.png"));
-			myplane1 = ImageIO.read(PlaneWar.class.getResource("myplane1.png"));
-			pause = ImageIO.read(PlaneWar.class.getResource("pause.png"));
-			start = ImageIO.read(PlaneWar.class.getResource("start.png"));
-			win = ImageIO.read(PlaneWar.class.getResource("win.png"));
-			bulletUsed = ImageIO.read(PlaneWar.class.getResource("bullet2.png"));
+			suicidalplane = ImageIO.read(planewar.PlaneWar.class.getResource("suicidalplane.png"));
+			background = ImageIO.read(planewar.PlaneWar.class.getResource("background.png"));
+			proplane = ImageIO.read(planewar.PlaneWar.class.getResource("proplane.png"));
+			commonplane = ImageIO.read(planewar.PlaneWar.class.getResource("commonplane.png"));
+			bullet = ImageIO.read(planewar.PlaneWar.class.getResource("bullet.png"));
+			gameover = ImageIO.read(planewar.PlaneWar.class.getResource("gameover.png"));
+			myplane0 = ImageIO.read(planewar.PlaneWar.class.getResource("myplane0.png"));
+			myplane1 = ImageIO.read(planewar.PlaneWar.class.getResource("myplane1.png"));
+			pause = ImageIO.read(planewar.PlaneWar.class.getResource("pause.png"));
+			start = ImageIO.read(planewar.PlaneWar.class.getResource("start.png"));
+			win = ImageIO.read(planewar.PlaneWar.class.getResource("win.png"));
+			bulletUsed = ImageIO.read(planewar.PlaneWar.class.getResource("bullet2.png"));
 		} catch (Exception e) {
 			// TODO: handle exception
 			e.printStackTrace();
@@ -120,6 +146,7 @@ public class PlaneWar extends JPanel {
 			break;
 		case WIN:
 			g.drawImage(win, 0, 0, null);
+			break;
 		}
 	}
 
@@ -131,6 +158,8 @@ public class PlaneWar extends JPanel {
 		g.drawImage(background,0,0,null);
 		// draw my plane
 		g.drawImage(myplane0,this.myPlane.getX(),this.myPlane.getY(),null);
+		// draw plane2
+		g.drawImage(myplane0, this.plane2.getX() + myplane0.getWidth(), this.plane2.getY(), null);
 		// draw the bullets
 		paintBullets(g);
 		// draw all enemy planes
@@ -158,7 +187,7 @@ public class PlaneWar extends JPanel {
 		KeyAdapter keyBullet = new KeyAdapter() {
 			public void keyPressed(KeyEvent e) {
 				if (state == RUNNING) {
-					if (e.getKeyCode() == e.VK_SPACE) {	
+					if (e.getKeyCode() == KeyEvent.VK_SPACE) {	
 						int temp = bulletIndex;
 						int interval = temp - lastBullet;
 						if (interval > 20) {
@@ -292,9 +321,13 @@ public class PlaneWar extends JPanel {
 	public void checkGameOverAction() {		
 		if (isGameOver()) {
 			this.state = GAME_OVER;
+	        message = "State|"+ state;
+	        os.println(message);
 		}
 		if (isWin()) {
 			this.state = WIN;
+	        message = "State|"+ state;
+	        os.println(message);
 		}
 	}
 	
@@ -352,6 +385,8 @@ public class PlaneWar extends JPanel {
 							myPlane.moveTo(x, y);
 						}
 					}
+			        message = "Plane1|"+myPlane.getX()+"|"+ myPlane.getY();
+			        os.println(message);
 				}
 			}
 		});
@@ -374,6 +409,7 @@ public class PlaneWar extends JPanel {
 					score = 0;
 					enemyLife = 0;
 					myPlane = new MyPlane();
+					plane2 = new MyPlane();
 					flyings = new GameObject[0];
 					bullets = new Bullet[0];
 					state = START;
@@ -382,6 +418,7 @@ public class PlaneWar extends JPanel {
 					score = 0;
 					enemyLife = 0;
 					myPlane = new MyPlane();
+					plane2 = new MyPlane();
 					flyings = new GameObject[0];
 					bullets = new Bullet[0];
 					state = START;
@@ -393,30 +430,17 @@ public class PlaneWar extends JPanel {
 					state = RUNNING;
 					break;
 				}
+		        message = "State|"+ state;
+		        os.println(message);
 			}
-			
-			// the game is pause when the mouse is out of the game panel
-//			public void mouseExited(MouseEvent e) {
-//				if (state == RUNNING) {
-//					state = PAUSE;
-//				}
-//			}
-//
-//			// the game restart when the mouse get into the game panel again
-//			public void mouseEntered(MouseEvent e) {
-//				if (state == PAUSE) {
-//					state = RUNNING;
-//				}
-//			}
 		};
 
 		this.addMouseListener(mouseAdapter);
 		this.addMouseMotionListener(mouseAdapter);
 		
-	}	
-
-	class PaintThread implements Runnable {
-		public void run() {
+	}
+	
+	public void run() {
 			while (true) {
 				if (state == RUNNING) {
 					enterFlyings();
@@ -439,19 +463,101 @@ public class PlaneWar extends JPanel {
 				}
 			}
 		}
-	}
 	
-	public static void main(String[] args) {
-		PlaneWar planeWar = new PlaneWar();
-		frame.add(planeWar);
-		frame.setAlwaysOnTop(true);
-		frame.setSize(WIDTH, HEIGHT);
-		frame.setLocationRelativeTo(null);
-		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-		frame.setVisible(true);
-		planeWar.action();
-		pt = planeWar.new PaintThread();
-		pt.run();
+    public PlaneWar(int port){
+        setFocusable(true);
+        // message = "hello server!";
+//        listenServer(ip,port);
+        listenClient(port);
+        action();
+        thread = new Thread(this);
+     // start game
+        thread.start();
+        setVisible(true);
+    }
 
-	}
+    private void listenServer(int port){
+        setFocusable(true);
+
+        action();
+
+     // start socket
+        listenClient(port);
+        thread = new Thread(this);
+     // start game
+        thread.start();
+        setVisible(true);
+    }
+    
+    private void listenClient(int port){
+        try{
+            new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    try{
+                        System.out.println("Listening port "+port);
+                        server = new ServerSocket(port);
+                        socket = server.accept();
+                        System.out.println("Accept Connection!");
+                    }catch (IOException e){
+                        e.printStackTrace();
+                    }
+                    connectThread = new ConnectThread();
+                    connectThread.start();
+                }
+            }).start();
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+    }
+    
+    private class ConnectThread extends Thread{
+        public void run(){
+              try{
+                is = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+                os = new PrintWriter(new OutputStreamWriter(socket.getOutputStream()),true);
+                while (true){
+
+                    try{
+                        os.println(message);         
+                    	String s1 = is.readLine();
+//                        String s2 = is.readLine();
+                        if (s1 == null) {
+                            continue;
+                        }
+ //                       os.println("goodjob");
+                        System.out.println(s1);
+                        if (s1.startsWith("Close")) {
+                            socket.close();
+                            is.close();
+                            os.close();
+                            // Todo:
+                            System.exit(0); // ？
+                        }
+                        if (s1.startsWith("Plane2")) {
+                            String ss[] = new String[3];
+                            ss = s1.split("\\|");
+//                            System.out.println(ss[1]);
+                            int x = Integer.parseInt(ss[1]);
+                            int y = Integer.parseInt(ss[2]);
+                            plane2.moveTo(x, y);
+                        }
+                        if (s1.startsWith("State")) {
+                        	String ss[] = new String[2];
+                        	ss = s1.split("\\|");
+                        	System.out.println(ss[1]);
+                        	state = Integer.parseInt(ss[1]);
+                        }
+                    }catch(IOException e){
+                        e.printStackTrace();
+                    }
+                }
+
+              }catch (IOException e){
+                  e.printStackTrace();
+              }
+        }
+
+    }
 }
+

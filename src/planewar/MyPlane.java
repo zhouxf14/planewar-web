@@ -4,7 +4,7 @@ public class MyPlane extends GameObject {
 	// the time interval between two bullets
 	int interval = 1000;
 	
-	MyPlane(){
+	public MyPlane(){
 		// the image for my plane
 		this.image = PlaneWar.myplane0;
 		// the life for my plane
